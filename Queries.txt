@@ -1,0 +1,117 @@
+/*Query 1
+	Create a query that lists of film category and the number of orders       
+*/
+
+SELECT  DISTINCT(c.name) AS category_name,
+        COUNT(rental_id) AS rental_count
+        
+    FROM    film_category fc
+    JOIN    category c
+    ON      fc.category_id = c.category_id
+    JOIN    film f
+    ON      f.film_id = fc.film_id
+    JOIN    inventory i
+     ON     i.film_id = f.film_id
+     JOIN   rental r
+     ON     r.inventory_id = i.inventory_id
+
+GROUP BY 1
+ORDER BY 2 DESC
+----------------------------------------------------------
+/*Query 2
+	Create a query that lists of film_title, film category and the number of orders       
+*/
+
+SELECT t.category_name, t.film_title, 
+       COUNT(*) rental_count 
+
+FROM
+    (SELECT c.name category_name,
+            f.title film_title,
+            r.rental_id
+    FROM    film_category fc
+    JOIN    category c
+    ON      fc.category_id = c.category_id
+    JOIN    film f
+    ON      f.film_id = fc.film_id
+    JOIN    inventory i
+     ON     i.film_id = f.film_id
+     JOIN   rental r
+     ON     r.inventory_id = i.inventory_id)t
+
+GROUP BY 1, 2
+ORDER BY 3 DESC
+LIMIT 10
+----------------------------------------------------------
+/*Query 3
+    creat query that returns the store ID for the store, 
+    the year and month and the number of rental orders each store has fulfilled for that month. 
+*/
+
+SELECT t.store_ID,t.month,t.year, 
+       COUNT(t.rental_id) AS Count_rental 
+ 
+FROM(SELECT s.store_id Store_ID, r.rental_id,
+     DATE_PART('month',r.rental_date) as month,
+     DATE_PART('year',r.rental_date) as year
+
+         FROM inventory i
+         JOIN store s
+           ON i.store_id = s.store_id
+         JOIN rental r
+           ON r.inventory_id = i.inventory_id )t
+    
+ GROUP BY 1,2,3
+ ORDER BY 4  DESC 
+------------------------------------------------------------------------
+/*Query 4
+	Create a query that returns the employee , month and the number of rental orders  
+    
+*/
+
+SELECT t.Name,t.month,t.total
+
+FROM ( SELECT s.first_name AS Name,
+       p.payment_date,p.amount,
+       DATE_PART('month',p.payment_date) as month,
+       COUNT(p.amount) OVER (PARTITION BY DATE_PART('month',p.payment_date) 
+       ORDER BY p.payment_date) AS total   
+
+FROM payment p
+         JOIN staff s
+           ON p.staff_id = s.staff_id)t
+
+           GROUP BY 1,2,3
+           ORDER BY 3 DESC
+------------------------------------------------------------------------------------------
+/*Query 5
+	 with the family-friendly film category, each of the quartiles, 
+      and the corresponding count of movies within each combination of film category
+      for each corresponding rental duration category  
+    
+*/
+
+SELECT t.name, t.standard_quartile,
+ CASE 
+	  WHEN name = 'Animation' THEN count(*)
+	  WHEN name = 'Children' THEN count(*)
+	  WHEN name = 'Classics' THEN count(*)
+	  WHEN name = 'Comedy' THEN count(*)
+	  WHEN name = 'Family' THEN count(*)
+	  ELSE count(*) END AS count
+
+FROM ( SELECT c.name, f.rental_duration,
+	   NTILE(4) OVER (ORDER BY f.rental_duration ) 
+        AS standard_quartile
+	
+       FROM film_category fc 
+       JOIN category c 
+        ON c.category_id = fc.category_id 
+       JOIN film f
+        ON f.film_id = fc.film_id
+      
+       WHERE c.name IN ('Animation','Children','Classics','Comedy', 'Family','Music'))t  
+     
+GROUP BY 1,2
+ORDER BY 1,2
+----------------------------------------------------------------------------------------             
